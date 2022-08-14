@@ -1,0 +1,19 @@
+BasedOnStyle: Microsoft
+
+TabWidth: 8
+IndentWidth: 8
+UseTab: Always
+BreakBeforeBraces: Allman
+PointerAlignment: Left
+
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignEscapedNewlines: Right
+AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
+
+SpaceAfterCStyleCast: true
+SpacesBeforeTrailingComments: 4
+
+SortIncludes: Never
+
+ColumnLimit: 0

@@ -6,6 +6,7 @@
 
 # Executables
 icmp_watch
+icmp_watch.dev
 
 # Debug files
 *.dSYM/
