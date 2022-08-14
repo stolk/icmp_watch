@@ -129,8 +129,8 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 			perror("recvfrom");
 			exit(5);
 		}
-		if (rc1 < sizeof rcv_hdr)
-			exit(6);    // ICMP packet was too short.
+		if ((unsigned) rc1 < sizeof rcv_hdr)	// NOTE: casting to unsigned is safe here, because we die if (rc1 <= 0)
+			exit(6);			// ICMP packet was too short.
 		const struct in_addr send_addr = other_addr.sin_addr;
 		int idx = -1;
 		// Look up which host sent us this reply.
