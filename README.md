@@ -15,6 +15,12 @@ Send batch requests for ICMP and show results in a console window to monitor ava
  * Single file C source.
  * MIT license.
 
+## Troubleshoot
+
+If the tool fails on permissions when creating the socket, please do:
+
+`$ sysctl -w net.ipv4.ping_group_range="0 2147483647"` to allow users to create ICMP sockets. You can use "0 0" range if you want this for root only.
+
 ## Author
 
 The icmp_watch tool is made by Abraham Stolk.
