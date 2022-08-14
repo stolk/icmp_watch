@@ -25,17 +25,19 @@
 // To allow all users to use icmp sockets, run:
 // $ sysctl -w net.ipv4.ping_group_range="0 2147483647"
 
-#define RESETALL    "\e[0m"
+#define ESC	    "\x1B"
 
-#define CURSORHOME  "\e[H"
+#define RESETALL    ESC "[0m"
 
-#define CLEARSCREEN "\e[H\e[2J\e[3J"
+#define CURSORHOME  ESC "[H"
 
-#define FGWHT	    "\e[1;37m"
+#define CLEARSCREEN ESC "[H" ESC "[2J" ESC "[3J"
 
-#define BGRED	    "\e[1;41m"
+#define FGWHT	    ESC "[1;37m"
 
-#define BGGRN	    "\e[1;42m"
+#define BGRED	    ESC "[1;41m"
+
+#define BGGRN	    ESC "[1;42m"
 
 static struct termios orig_termios;    // The terminal settings before we modified it.
 
