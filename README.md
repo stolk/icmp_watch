@@ -13,7 +13,7 @@ Send batch requests for ICMP and show results in a console window to monitor ava
 
 ## Usage
 
-`$ ./icmp_watch hostname [..hostname]`
+`$ ./icmp_watch hostname [...hostname]`
 
 Press Q or ESC to stop monitoring.
 
