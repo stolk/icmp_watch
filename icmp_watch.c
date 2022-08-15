@@ -111,10 +111,14 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 		if (rc0 == 0)
 		{
 			// Timed out without a reply.
+			close(sock);
+			sock = 0;
 			return num_replies;
 		}
 		else if (rc0 < 0)
 		{
+			close(sock);
+			sock = 0;
 			perror("select");
 			return -1;
 		}
