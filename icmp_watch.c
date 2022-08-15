@@ -61,6 +61,7 @@ void enableRawMode()
 static int ping_all(int cnt, struct in_addr* destinations, int* response_times, struct timeval* timeout)
 {
 	static int sequence = 0;
+	const int seq = sequence++;        // the sequence number we will use for this run.
 	const int waittime = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
 	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
 	if (sock < 0)
@@ -88,7 +89,7 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 		icmp_hdr.type = ICMP_ECHO;
 		icmp_hdr.un.echo.id = 0xbeef;
 
-		icmp_hdr.un.echo.sequence = sequence;
+		icmp_hdr.un.echo.sequence = seq;
 		memcpy(txdata, &icmp_hdr, sizeof icmp_hdr);
 		int rc = sendto(sock, txdata, sizeof icmp_hdr + payloadsz, 0, (struct sockaddr*) &addr, sizeof addr);
 		if (rc <= 0)
@@ -97,7 +98,6 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 			exit(3);
 		}
 	}
-	sequence++;
 
 	fd_set read_set;
 	memset(&read_set, 0, sizeof read_set);
@@ -129,20 +129,23 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 			perror("recvfrom");
 			exit(5);
 		}
-		if ((unsigned) rc1 < sizeof rcv_hdr)	// NOTE: casting to unsigned is safe here, because we die if (rc1 <= 0)
+		if (rc1 < (int) sizeof(rcv_hdr))
 			exit(6);			// ICMP packet was too short.
-		const struct in_addr send_addr = other_addr.sin_addr;
-		int idx = -1;
-		// Look up which host sent us this reply.
-		for (int j = 0; j < cnt; ++j)
-			if (destinations[j].s_addr == send_addr.s_addr)
-				idx = j;
-		assert(idx >= 0);
-		const int timeleft = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
-		response_times[idx] = waittime - timeleft;
 		memcpy(&rcv_hdr, rcdata, sizeof rcv_hdr);
 		assert(rcv_hdr.type == ICMP_ECHOREPLY);
-		num_replies += 1;
+		if (rcv_hdr.un.echo.sequence == seq)	// The sequence number should match, otherwise it's not a valid response.
+		{
+			const struct in_addr send_addr = other_addr.sin_addr;
+			int idx = -1;
+			// Look up which host sent us this reply.
+			for (int j = 0; j < cnt; ++j)
+				if (destinations[j].s_addr == send_addr.s_addr)
+					idx = j;
+			assert(idx >= 0);
+			const int timeleft = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
+			response_times[idx] = waittime - timeleft;
+			num_replies += 1;
+		}
 	}
 	if (close(sock) < 0)
 		perror("close(socket)");
