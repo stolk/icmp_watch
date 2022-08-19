@@ -189,7 +189,7 @@ void print_help(char *progname) {
 	// Restyled the help to more closely match the --help text for mv, etc.
 	printf("Usage: %s [option]... destination_ip...\n"
 		   "Send batch requests for ICMP and show the results\n\n"
-		   "  -i, --interval=INTERVAL\tspecify how long to wait for replies (real numbers, e.g. 1.5 are allowed)\n"
+		   "  -i, --interval=INTERVAL\tspecify how long in seconds to wait for replies (real numbers, e.g. 1.5 are allowed)\n"
 		   "  -h, --help\t\t\tshow this help\n", progname);
 }
 
