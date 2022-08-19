@@ -18,6 +18,7 @@
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <getopt.h>		// for getopt_long()
 
 // NOTE:
 // To allow root to use icmp sockets, run:
@@ -191,6 +192,47 @@ int main(int argc, char* argv[])
 		printf("usage: %s destination_ip [... destination_ip]\n", argv[0]);
 		return 1;
 	}
+	
+	struct timeval timeout = {1, 0};    // seconds, microseconds.
+	
+	// Parse command line options (we'll break out of the loop)
+	while(1) {
+		int option_index = 0;
+		int c;
+		static struct option long_options[] = {
+			{"interval", required_argument, 0, 'i'},
+			{"help", no_argument, 0, 'h'},
+			{0, 0, 0, 0} 	// default option (for unknown options)
+		};
+		
+		c = getopt_long(argc, argv, "i:h", long_options, &option_index);
+		
+		if (c == -1) {
+			break; // no more options
+		}
+		
+		switch(c) {
+			case 0:
+				printf("Unknown option %s\n", long_options[option_index].name);
+				break;
+			case 'i':
+				// Convert the argument to --interval to a (double) float, then convert it to a timespec struct
+				if(optarg) {
+					double interval_double;
+					errno = 0;		// Set errno to 0 so we can detect errors
+					interval_double = strtod(optarg, NULL);
+					if(errno != 0) {
+						perror("Converting interval");
+						exit(1);
+					}
+					printf("Good interval: %f\n", interval_double);
+					exit(0);
+				} else {
+					fprintf(stderr, "-i/--interval needs an argument\n");
+					exit(1);
+				}
+		}
+	} // Finished parsing command line options
 
 	const int cnt = argc - 1;    // Every argument on command line is a hostname.
 	struct in_addr dst[cnt];     // The IP numbers of the hosts.
@@ -216,7 +258,6 @@ int main(int argc, char* argv[])
 		const int numr = read(STDIN_FILENO, &c, 1);
 		if (numr == 1 && (c == 27 || c == 'q' || c == 'Q'))
 			done = 1;
-		struct timeval timeout = {1, 0};    // seconds, microseconds.
 		ping_all(cnt, dst, response_times, &timeout);
 		fprintf(stdout, CLEARSCREEN);
 		for (int i = 0; i < cnt; ++i)
