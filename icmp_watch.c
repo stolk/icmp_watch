@@ -159,7 +159,7 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 }
 
 // Resolves a set of hostnames to IPv4 numbers.
-static int get_ip_addresses(int cnt, char** hosts, struct in_addr* ips)
+static int get_ip_addresses(int cnt, char** hosts, int args_left, struct in_addr* ips)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
@@ -168,7 +168,7 @@ static int get_ip_addresses(int cnt, char** hosts, struct in_addr* ips)
 	for (int i = 0; i < cnt; ++i)
 	{
 		struct addrinfo* infos;
-		const char* host = hosts[i];
+		const char* host = hosts[args_left + i];
 		const int rv = getaddrinfo(host, 0, &hints, &infos);
 		if (rv)
 		{
@@ -185,14 +185,16 @@ static int get_ip_addresses(int cnt, char** hosts, struct in_addr* ips)
 	return cnt;
 }
 
+void print_help(char *progname) {
+	// Restyled the help to more closely match the --help text for mv, etc.
+	printf("Usage: %s [option]... destination_ip...\n"
+		   "Send batch requests for ICMP and show the results\n\n"
+		   "  -i, --interval=INTERVAL\tspecify how long to wait for replies (real numbers, e.g. 1.5 are allowed)\n"
+		   "  -h, --help\t\t\tshow this help\n", progname);
+}
+
 int main(int argc, char* argv[])
 {
-	if (argc < 2)
-	{
-		printf("usage: %s destination_ip [... destination_ip]\n", argv[0]);
-		return 1;
-	}
-	
 	struct timeval default_timeout = {1, 0};    // seconds, microseconds.
 	
 	// Parse command line options (we'll break out of the loop)
@@ -211,6 +213,7 @@ int main(int argc, char* argv[])
 			break; // no more options
 		}
 		
+		//printf("Right now c is %i (%c)\n", c, c);
 		switch(c) {
 			case 0:
 				printf("Unknown option %s\n", long_options[option_index].name);
@@ -225,22 +228,36 @@ int main(int argc, char* argv[])
 						perror("Converting interval");
 						exit(1);
 					}
-					printf("Good interval: %f\n", interval_double);
-					exit(0);
+					// Set the specified interval as the default timeout
+					default_timeout.tv_sec = (int) interval_double;
+					default_timeout.tv_usec = (int) (interval_double * 1000000);
+					break;
 				} else {
 					fprintf(stderr, "-i/--interval needs an argument\n");
 					exit(1);
 				}
+			case 'h':
+				print_help(argv[0]);
+				exit(0);
+			default:
+				//fprintf(stderr, "getopt_long returned character code 0x%x\n", c);
 		}
 	} // Finished parsing command line options
 
-	const int cnt = argc - 1;    // Every argument on command line is a hostname.
+	if (optind < argc) {
+		//printf("%i non-option argv elements?\n", argc - optind);
+	} else {
+		print_help(argv[0]);
+		return 1;
+	}
+	
+	const int cnt = argc - optind;    // Every argument left after taking away the options is a hostname.
 	struct in_addr dst[cnt];     // The IP numbers of the hosts.
 	int response_times[cnt];     // The response time for each host we ping.
 
 	fprintf(stderr, "Looking up %d ip numbers...", cnt);
 	fflush(stderr);
-	const int num = get_ip_addresses(cnt, argv + 1, dst);
+	const int num = get_ip_addresses(cnt, argv, optind, dst);
 	fprintf(stderr, "DONE\n");
 	if (num != cnt)
 	{
@@ -264,7 +281,7 @@ int main(int argc, char* argv[])
 		for (int i = 0; i < cnt; ++i)
 		{
 			const int t = response_times[i];
-			fprintf(stdout, "%-20s", argv[1 + i]);
+			fprintf(stdout, "%-20s", argv[optind + i]);
 			if (t < 0)
 				fprintf(stdout, FGWHT BGRED "NO REPLY" RESETALL "\n");
 			else
