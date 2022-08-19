@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	
-	struct timeval timeout = {1, 0};    // seconds, microseconds.
+	struct timeval default_timeout = {1, 0};    // seconds, microseconds.
 	
 	// Parse command line options (we'll break out of the loop)
 	while(1) {
@@ -258,6 +258,7 @@ int main(int argc, char* argv[])
 		const int numr = read(STDIN_FILENO, &c, 1);
 		if (numr == 1 && (c == 27 || c == 'q' || c == 'Q'))
 			done = 1;
+		struct timeval timeout = default_timeout;
 		ping_all(cnt, dst, response_times, &timeout);
 		fprintf(stdout, CLEARSCREEN);
 		for (int i = 0; i < cnt; ++i)
