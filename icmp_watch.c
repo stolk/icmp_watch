@@ -188,7 +188,7 @@ static int get_ip_addresses(int cnt, char** hosts, int args_left, struct in_addr
 void print_help(char *progname) {
 	// Restyled the help to more closely match the --help text for mv, etc.
 	printf("Usage: %s [option]... destination_ip...\n"
-		   "Send batch requests for ICMP and show the results\n\n"
+		   "Send batch requests for ICMP and show the results\nPress q or escape to exit\n\n"
 		   "  -i, --interval=INTERVAL\tspecify how long in seconds to wait for replies (real numbers, e.g. 1.5 are allowed)\n"
 		   "  -h, --help\t\t\tshow this help\n", progname);
 }
