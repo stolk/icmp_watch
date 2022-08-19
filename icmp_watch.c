@@ -58,7 +58,7 @@ void enableRawMode()
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-static int ping_all(int cnt, struct in_addr* destinations, int* response_times, struct timeval* timeout)
+static int ping_all(int cnt, struct in_addr* destinations, int* response_times, int* errors, struct timeval* timeout)
 {
 	static int sequence = 0;
 	const int seq = sequence++;        // the sequence number we will use for this run.
@@ -70,8 +70,10 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 		exit(4);
 	}
 
-	for (int i = 0; i < cnt; ++i)
-		response_times[i] = -1;	   // what we return if we did not get a reply.
+	for (int i = 0; i < cnt; ++i) {
+		response_times[i] = -1;	  	// what we return if we did not get a reply.
+		errors[i] = 0;			  	// what we return if there wasn’t an error
+	}
 
 	// Send an ICMP request to each destination.
 	struct icmphdr icmp_hdr;
@@ -94,8 +96,7 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 		int rc = sendto(sock, txdata, sizeof icmp_hdr + payloadsz, 0, (struct sockaddr*) &addr, sizeof addr);
 		if (rc <= 0)
 		{
-			perror("Sendto");
-			exit(3);
+			errors[i] = errno;
 		}
 	}
 
@@ -195,6 +196,7 @@ int main(int argc, char* argv[])
 	const int cnt = argc - 1;    // Every argument on command line is a hostname.
 	struct in_addr dst[cnt];     // The IP numbers of the hosts.
 	int response_times[cnt];     // The response time for each host we ping.
+	int errors[cnt];             // The errno(3) for each host (0 if no error)
 
 	fprintf(stderr, "Looking up %d ip numbers...", cnt);
 	fflush(stderr);
@@ -217,14 +219,18 @@ int main(int argc, char* argv[])
 		if (numr == 1 && (c == 27 || c == 'q' || c == 'Q'))
 			done = 1;
 		struct timeval timeout = {1, 0};    // seconds, microseconds.
-		ping_all(cnt, dst, response_times, &timeout);
+		ping_all(cnt, dst, response_times, errors, &timeout);
 		fprintf(stdout, CLEARSCREEN);
 		for (int i = 0; i < cnt; ++i)
 		{
 			const int t = response_times[i];
+			const int e = errors[i];
 			fprintf(stdout, "%-20s", argv[1 + i]);
 			if (t < 0)
-				fprintf(stdout, FGWHT BGRED "NO REPLY" RESETALL "\n");
+				if (e != 0)
+					fprintf(stdout, FGWHT BGRED "   ERROR" RESETALL " (%s)\n", strerror(e));
+				else
+					fprintf(stdout, FGWHT BGRED "NO REPLY" RESETALL "\n");
 			else
 				fprintf(stdout, FGWHT BGGRN "%5d ms" RESETALL "\n", t / 1000);
 		}
