@@ -27,7 +27,7 @@ Press Q or ESC to stop monitoring.
 
 ## Function
 
-This tool will batch test availability by sending out N ICMP-requests, and then wait up to 1 second  for N replies.
+This tool will batch test availability by sending out N ICMP-requests, and then wait up to 1 second for N replies.
 
 Hosts that do not reply will be marked in RED, others in GREEN with the response time shown in milliseconds.
 
