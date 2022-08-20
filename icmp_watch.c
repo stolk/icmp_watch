@@ -211,6 +211,19 @@ int main(int argc, char* argv[])
 	enableRawMode();    // Don't echo keyboard characters, don't buffer them.
 
 	int done = 0;
+	int spaceForHostname = 19;	// Default spacing is 19 characters. (it was 20 before, but it'll get incremented later to ensure that there's always at least one space between the hostname and the result)
+	
+	// Check if any of the hostnames are longer than 20 characters and up spaceForHostname if the are
+	for (int i = 0; i < cnt; i++) {
+		/* this line will need changing if the cli options patch is merged */
+		int lengthOfThisHostname = strlen(argv[1 + i]);
+		if(lengthOfThisHostname > spaceForHostname) {
+			spaceForHostname = lengthOfThisHostname;
+		}
+	}
+	// Increment space for hostname by one so that there will always be at least one space between it and the result
+	spaceForHostname++;
+	
 	while (!done)
 	{
 		// When ESC or Q is pressed, we should terminate.
@@ -225,7 +238,7 @@ int main(int argc, char* argv[])
 		{
 			const int t = response_times[i];
 			const int e = errors[i];
-			fprintf(stdout, "%-20s", argv[1 + i]);
+			fprintf(stdout, "%-*s", spaceForHostname, argv[1 + i]);
 			if (t < 0)
 				if (e != 0)
 					fprintf(stdout, FGWHT BGRED "   ERROR" RESETALL " (%s)\n", strerror(e));
