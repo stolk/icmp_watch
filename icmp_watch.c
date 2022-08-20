@@ -58,12 +58,12 @@ void enableRawMode()
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-static int ping_all(int cnt, struct in_addr* destinations, int* response_times, int* errors, struct timeval* timeout)
+static int ping_all(int cnt, struct in6_addr* destinations, int* response_times, int* errors, struct timeval* timeout)
 {
 	static int sequence = 0;
 	const int seq = sequence++;        // the sequence number we will use for this run.
 	const int waittime = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
+	int sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6);
 	if (sock < 0)
 	{
 		perror("socket");
@@ -82,10 +82,10 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 	memcpy(txdata + sizeof icmp_hdr, "icmp_watch", payloadsz);    // icmp payload
 	for (int i = 0; i < cnt; ++i)
 	{
-		struct sockaddr_in addr;
+		struct sockaddr_in6 addr;
 		memset(&addr, 0, sizeof addr);
-		addr.sin_family = AF_INET;
-		addr.sin_addr = destinations[i];
+		addr.sin6_family = AF_INET6;
+		addr.sin6_addr = destinations[i];
 
 		memset(&icmp_hdr, 0, sizeof icmp_hdr);
 		icmp_hdr.type = ICMP_ECHO;
@@ -126,7 +126,7 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 
 		unsigned char rcdata[256];
 		struct icmphdr rcv_hdr;
-		struct sockaddr_in other_addr;
+		struct sockaddr_in6 other_addr;
 		socklen_t other_addr_len = sizeof(other_addr);
 		const int rc1 = recvfrom(sock, rcdata, sizeof rcdata, 0, (struct sockaddr*) &other_addr, &other_addr_len);
 		if (rc1 <= 0)
@@ -140,11 +140,11 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 		assert(rcv_hdr.type == ICMP_ECHOREPLY);
 		if (rcv_hdr.un.echo.sequence == seq)	// The sequence number should match, otherwise it's not a valid response.
 		{
-			const struct in_addr send_addr = other_addr.sin_addr;
+			const struct in6_addr send_addr = other_addr.sin6_addr;
 			int idx = -1;
 			// Look up which host sent us this reply.
 			for (int j = 0; j < cnt; ++j)
-				if (destinations[j].s_addr == send_addr.s_addr)
+				if (destinations[j].s6_addr == send_addr.s6_addr)
 					idx = j;
 			assert(idx >= 0);
 			const int timeleft = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
@@ -158,13 +158,14 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 	return num_replies;
 }
 
-// Resolves a set of hostnames to IPv4 numbers.
-static int get_ip_addresses(int cnt, char** hosts, struct in_addr* ips)
+// Resolves a set of hostnames to IPv6 numbers. (they may be IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1)
+static int get_ip_addresses(int cnt, char** hosts, struct in6_addr* ips)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
+	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	for (int i = 0; i < cnt; ++i)
 	{
 		struct addrinfo* infos;
@@ -177,8 +178,8 @@ static int get_ip_addresses(int cnt, char** hosts, struct in_addr* ips)
 		}
 		for (struct addrinfo* inf = infos; inf != 0; inf = inf->ai_next)
 		{
-			struct sockaddr_in* addr = (struct sockaddr_in*) inf->ai_addr;
-			ips[i] = addr->sin_addr;
+			struct sockaddr_in6* addr = (struct sockaddr_in6*) inf->ai_addr;
+			ips[i] = addr->sin6_addr;
 		}
 		freeaddrinfo(infos);
 	}
@@ -194,7 +195,7 @@ int main(int argc, char* argv[])
 	}
 
 	const int cnt = argc - 1;    // Every argument on command line is a hostname.
-	struct in_addr dst[cnt];     // The IP numbers of the hosts.
+	struct in6_addr dst[cnt];     // The IP numbers of the hosts.
 	int response_times[cnt];     // The response time for each host we ping.
 	int errors[cnt];             // The errno(3) for each host (0 if no error)
 
