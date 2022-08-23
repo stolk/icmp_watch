@@ -100,8 +100,22 @@ static int ping_all(int cnt, struct destination_info* destinations, struct timev
 	// A fork in the road, as the code if different for v4 and v6
 	for (int i = 0; i < cnt; ++i) {
 		if (destinations[i].address->sa_family == AF_INET) {
-			destinations[i].error = ENOSYS;	// Not implemented
-			return 0;
+			struct sockaddr_in addr;
+			memset(&addr, 0, sizeof addr);
+			addr.sin_family = AF_INET;
+			addr.sin_addr = ((struct sockaddr_in *) destinations[i].address)->sin_addr;
+
+			memset(&icmp_hdr, 0, sizeof icmp_hdr);
+			icmp_hdr.type = ICMP_ECHO;
+			icmp_hdr.un.echo.id = 0xbeef;
+
+			icmp_hdr.un.echo.sequence = seq;
+			memcpy(txdata, &icmp_hdr, sizeof icmp_hdr);
+			int rc = sendto(sock, txdata, sizeof icmp_hdr + payloadsz, 0, (struct sockaddr*) &addr, sizeof addr);
+			if (rc <= 0)
+			{
+				destinations[i].error = errno;
+			}
 		} else if (destinations[i].address->sa_family == AF_INET6) {
 			struct sockaddr_in6 addr;
 			memset(&addr, 0, sizeof addr);
@@ -122,19 +136,22 @@ static int ping_all(int cnt, struct destination_info* destinations, struct timev
 		}
 	}
 
-	fd_set read_set;
-	memset(&read_set, 0, sizeof read_set);
 	int highestfd;
 	if (sock > sock6)
 		highestfd = sock;
 	else
 		highestfd = sock6;
-	FD_SET(sock, &read_set);
-	FD_SET(sock6, &read_set);
 
 	int num_replies = 0;
 	while (num_replies < cnt)
 	{
+		// Set the file descriptor set for select()
+		// According to the man page for select(), this should be done every iteration of a loop
+		fd_set read_set;
+		FD_ZERO(&read_set);
+		FD_SET(sock, &read_set);
+		FD_SET(sock6, &read_set);
+		
 		// wait for a reply with a timeout
 		const int rc0 = select(highestfd + 1, &read_set, NULL, NULL, timeout);
 		if (rc0 == 0)
@@ -179,7 +196,7 @@ static int ping_all(int cnt, struct destination_info* destinations, struct timev
 				int idx = -1;
 				// Look up which host sent us this reply.
 				for (int j = 0; j < cnt; ++j)
-					if(((struct sockaddr_in* ) destinations[j].address)->sin_addr.s_addr != send_addr.s_addr) {
+					if(((struct sockaddr_in* ) destinations[j].address)->sin_addr.s_addr == send_addr.s_addr) {
 						idx = j;
 						break;
 					}
@@ -216,6 +233,7 @@ static int ping_all(int cnt, struct destination_info* destinations, struct timev
 					int thisone = 1;
 					for(int x = 0; x < 16; x++) {
 						if(((struct sockaddr_in6* ) destinations[j].address)->sin6_addr.s6_addr[x] != send6_addr.s6_addr[x]) {
+							// One of the bytes don't match, so it isn't this host
 							thisone = 0;
 							break;
 						}
@@ -262,6 +280,7 @@ static int get_ip_addresses(int cnt, char** hosts, struct destination_info* dest
 		}
 		for (struct addrinfo* inf = infos; inf != 0; inf = inf->ai_next)
 		{
+			int haveaddr = 0;
 			// Check if the returned address was v4 or v6
  			switch(inf->ai_family) {
 				case AF_INET: {
@@ -274,7 +293,8 @@ static int get_ip_addresses(int cnt, char** hosts, struct destination_info* dest
 						exit(EXIT_FAILURE);
 					}
 					memcpy(copied_ai_addr, inf->ai_addr, sizeof(struct sockaddr_in));
-					destinations->address = (struct sockaddr*) copied_ai_addr;
+					destinations[i].address = (struct sockaddr*) copied_ai_addr;
+					haveaddr = 1;
 					break;
 				}
 				case AF_INET6: {
@@ -287,16 +307,18 @@ static int get_ip_addresses(int cnt, char** hosts, struct destination_info* dest
 						exit(EXIT_FAILURE);
 					}
 					memcpy(copied_ai_addr, inf->ai_addr, sizeof(struct sockaddr_in6));
-					destinations->address = (struct sockaddr*) copied_ai_addr;
+					destinations[i].address = (struct sockaddr*) copied_ai_addr;
+					haveaddr = 1;
 					break;
 				}
 				default: {
 					fprintf(stderr, "For %s, we got an address type (%i) that wasn't AF_INET (%i) or AF_INET6 (%i)", host, inf->ai_family, AF_INET, AF_INET6);
-					//exit(7);
 				}
 			}
-			//struct sockaddr_in6* addr = (struct sockaddr_in6*) inf->ai_addr;
-			//ips[i] = addr->sin6_addr;
+			if (haveaddr) {
+				// Break out of the loop if we have an address
+				break;
+			}
 		}
 		freeaddrinfo(infos);
 	}
@@ -328,7 +350,7 @@ int main(int argc, char* argv[])
 	enableRawMode();    // Don't echo keyboard characters, don't buffer them.
 
 	int done = 0;
-	FILE *outputfd = fopen("/tmp/icmp_watch.txt", "w");
+	
 	while (!done)
 	{
 		// When ESC or Q is pressed, we should terminate.
@@ -338,19 +360,19 @@ int main(int argc, char* argv[])
 			done = 1;
 		struct timeval timeout = {1, 0};    // seconds, microseconds.
 		ping_all(cnt, destinations, &timeout);
-		fprintf(outputfd, CLEARSCREEN);
+		fprintf(stdout, CLEARSCREEN);
 		for (int i = 0; i < cnt; ++i)
 		{
 			const int t = destinations[i].response_time;
 			const int e = destinations[i].error;
-			fprintf(outputfd, "%-20s", argv[1 + i]);
+			fprintf(stdout, "%-20s", argv[1 + i]);
 			if (t < 0)
 				if (e != 0)
-					fprintf(outputfd, FGWHT BGRED "   ERROR" RESETALL " (%s)\n", strerror(e));
+					fprintf(stdout, FGWHT BGRED "   ERROR" RESETALL " (%s)\n", strerror(e));
 				else
-					fprintf(outputfd, FGWHT BGRED "NO REPLY" RESETALL "\n");
+					fprintf(stdout, FGWHT BGRED "NO REPLY" RESETALL "\n");
 			else
-				fprintf(outputfd, FGWHT BGGRN "%5d ms" RESETALL "\n", t / 1000);
+				fprintf(stdout, FGWHT BGGRN "%5d ms" RESETALL "\n", t / 1000);
 		}
 		// Pace ourselves.
 		const int NS_PER_US = 1000;
@@ -358,9 +380,13 @@ int main(int argc, char* argv[])
 		struct timespec ts = {0, us_left * NS_PER_US};
 		nanosleep(&ts, 0);
 	}
-	fprintf(outputfd, CLEARSCREEN);
+	fprintf(stdout, CLEARSCREEN);
 	
-	fclose(outputfd);
+	// Free addresses got from get_ip_addresses
+	for (int i = 0; i < cnt; i++) {
+		free(destinations[i].address);
+	}
+	
 	return 0;
 }
 
