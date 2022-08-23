@@ -135,7 +135,6 @@ static int ping_all(int cnt, struct in6_addr* destinations, int* response_times,
 			perror("recvfrom");
 			exit(5);
 		}
-		printf("Type of other_addr was %i\n", other_addr.sin6_family);
 		if (rc1 < (int) sizeof(rcv_hdr))
 			exit(6);			// ICMP packet was too short.
 		memcpy(&rcv_hdr, rcdata, sizeof rcv_hdr);
