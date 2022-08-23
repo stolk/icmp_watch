@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/icmp6.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 
@@ -76,10 +77,10 @@ static int ping_all(int cnt, struct in6_addr* destinations, int* response_times,
 	}
 
 	// Send an ICMP request to each destination.
-	struct icmphdr icmp_hdr;
+	struct icmp6_hdr icmp6_hdr;
 	unsigned char txdata[256];
 	const int payloadsz = 10;
-	memcpy(txdata + sizeof icmp_hdr, "icmp_watch", payloadsz);    // icmp payload
+	memcpy(txdata + sizeof icmp6_hdr, "icmp_watch", payloadsz);    // icmp payload
 	for (int i = 0; i < cnt; ++i)
 	{
 		struct sockaddr_in6 addr;
@@ -87,13 +88,13 @@ static int ping_all(int cnt, struct in6_addr* destinations, int* response_times,
 		addr.sin6_family = AF_INET6;
 		addr.sin6_addr = destinations[i];
 
-		memset(&icmp_hdr, 0, sizeof icmp_hdr);
-		icmp_hdr.type = ICMP_ECHO;
-		icmp_hdr.un.echo.id = 0xbeef;
+		memset(&icmp6_hdr, 0, sizeof icmp6_hdr);
+		icmp6_hdr.icmp6_type = ICMP6_ECHO_REQUEST;
+		icmp6_hdr.icmp6_id = 0xbeef;
 
-		icmp_hdr.un.echo.sequence = seq;
-		memcpy(txdata, &icmp_hdr, sizeof icmp_hdr);
-		int rc = sendto(sock, txdata, sizeof icmp_hdr + payloadsz, 0, (struct sockaddr*) &addr, sizeof addr);
+		icmp6_hdr.icmp6_seq = seq;
+		memcpy(txdata, &icmp6_hdr, sizeof icmp6_hdr);
+		int rc = sendto(sock, txdata, sizeof icmp6_hdr + payloadsz, 0, (struct sockaddr*) &addr, sizeof addr);
 		if (rc <= 0)
 		{
 			errors[i] = errno;
@@ -125,7 +126,7 @@ static int ping_all(int cnt, struct in6_addr* destinations, int* response_times,
 		}
 
 		unsigned char rcdata[256];
-		struct icmphdr rcv_hdr;
+		struct icmp6_hdr rcv_hdr;
 		struct sockaddr_in6 other_addr;
 		socklen_t other_addr_len = sizeof(other_addr);
 		const int rc1 = recvfrom(sock, rcdata, sizeof rcdata, 0, (struct sockaddr*) &other_addr, &other_addr_len);
@@ -134,18 +135,28 @@ static int ping_all(int cnt, struct in6_addr* destinations, int* response_times,
 			perror("recvfrom");
 			exit(5);
 		}
+		printf("Type of other_addr was %i\n", other_addr.sin6_family);
 		if (rc1 < (int) sizeof(rcv_hdr))
 			exit(6);			// ICMP packet was too short.
 		memcpy(&rcv_hdr, rcdata, sizeof rcv_hdr);
-		assert(rcv_hdr.type == ICMP_ECHOREPLY);
-		if (rcv_hdr.un.echo.sequence == seq)	// The sequence number should match, otherwise it's not a valid response.
+		assert(rcv_hdr.icmp6_type == ICMP6_ECHO_REPLY);
+		if (rcv_hdr.icmp6_seq == seq)	// The sequence number should match, otherwise it's not a valid response.
 		{
 			const struct in6_addr send_addr = other_addr.sin6_addr;
 			int idx = -1;
 			// Look up which host sent us this reply.
-			for (int j = 0; j < cnt; ++j)
-				if (destinations[j].s6_addr == send_addr.s6_addr)
+			for (int j = 0; j < cnt; ++j) {
+				// For IPv6 we have to compare all 16 unsigned chars of the address (128 bits)
+				int thisone = 1;
+				for(int x = 0; x < 16; x++) {
+					if(destinations[j].s6_addr[x] != send_addr.s6_addr[x]) {
+						thisone = 0;
+						break;
+					}
+				}
+				if (thisone)
 					idx = j;
+			}
 			assert(idx >= 0);
 			const int timeleft = (int) (timeout->tv_sec * 1000000 + timeout->tv_usec);
 			response_times[idx] = waittime - timeleft;
