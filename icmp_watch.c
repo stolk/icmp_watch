@@ -13,7 +13,6 @@
 #include <netdb.h>	// for getattrinfo()
 #include <time.h>	// for nanosleep()
 #include <sys/socket.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
