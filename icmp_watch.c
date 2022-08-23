@@ -263,11 +263,27 @@ static int ping_all(int cnt, struct destination_info* destinations, struct timev
 }
 
 // Resolves a set of hostnames to IPv4 or IPv6 addresses
-static int get_ip_addresses(int cnt, char** hosts, int args_left, struct destination_info* destinations)
+static int get_ip_addresses(int cnt, char** hosts, int args_left, struct destination_info* destinations, int restrict_protocol)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
+	
+	// Restrict protocol: if 0, both IPv4 and IPv6 are enabled, if 4, only v4 and if 6, only v6
+	switch (restrict_protocol) {
+		case 0:
+			hints.ai_family = AF_UNSPEC;
+			break;
+		case 4:
+			hints.ai_family = AF_INET;
+			break;
+		case 6:
+			hints.ai_family = AF_INET6;
+			break;
+		default:
+			fprintf(stderr, "Unknown protocol restrict of %i, setting to AF_UNSPEC", restrict_protocol);
+			hints.ai_family = AF_UNSPEC;
+			break;
+	}
 	hints.ai_socktype = SOCK_DGRAM;
 	for (int i = 0; i < cnt; ++i)
 	{
@@ -331,12 +347,17 @@ void print_help(char *progname) {
 	printf("Usage: %s [option]... destination_ip...\n"
 		   "Send batch requests for ICMP and show the results\nPress q or escape to exit\n\n"
 		   "  -i, --interval=INTERVAL\tspecify how long in seconds to wait for replies (real numbers, e.g. 1.5 are allowed)\n"
+		   " -4\t\t\t\tOnly use IPv4\n"
+		   " -6\t\t\t\tOnly use IPv6\n"
 		   "  -h, --help\t\t\tshow this help\n", progname);
 }
 
 int main(int argc, char* argv[])
 {
 	struct timeval default_timeout = {1, 0};    // seconds, microseconds.
+	
+	// Restrict protocol: if 0, both IPv4 and IPv6 are enabled, if 4, only v4 and if 6, only v6
+	int restrict_protocol = 0;
 	
 	// Parse command line options (we'll break out of the loop)
 	while(1) {
@@ -348,7 +369,7 @@ int main(int argc, char* argv[])
 			{0, 0, 0, 0} 	// default option (for unknown options)
 		};
 		
-		c = getopt_long(argc, argv, "i:h", long_options, &option_index);
+		c = getopt_long(argc, argv, "46i:h", long_options, &option_index);
 		
 		if (c == -1) {
 			break; // no more options
@@ -377,6 +398,14 @@ int main(int argc, char* argv[])
 					fprintf(stderr, "-i/--interval needs an argument\n");
 					exit(1);
 				}
+			case '4':
+				// Only use IPv4
+				restrict_protocol = 4;
+				break;
+			case '6':
+				// Only use IPv6
+				restrict_protocol = 6;
+				break;
 			case 'h':
 				print_help(argv[0]);
 				exit(0);
@@ -397,7 +426,7 @@ int main(int argc, char* argv[])
 
 	fprintf(stderr, "Looking up %d ip numbers...", cnt);
 	fflush(stderr);
-	const int num = get_ip_addresses(cnt, argv, optind, destinations);
+	const int num = get_ip_addresses(cnt, argv, optind, destinations, restrict_protocol);
 	fprintf(stderr, "DONE\n");
 	if (num != cnt)
 	{
