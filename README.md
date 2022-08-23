@@ -13,14 +13,21 @@ Send batch requests for ICMP and show results in a console window to monitor ava
 
 ## Usage
 
-`$ ./icmp_watch hostname [...hostname]`
+`$ ./icmp_watch [option]... hostname...`
+
+(Multiple hostnames can be specified.)
+
+Valid options are:
+
+* `-i` or `--interval`: specify how long in seconds to wait for replies (real numbers, e.g. 1.5 are allowed, default is 1 second)
+* `-h` or `--help`: show help text
 
 Press Q or ESC to stop monitoring.
 
 
 ## Function
 
-This tool will batch test availability by sending out N ICMP-request, and then wait up to 1 second for N replies.
+This tool will batch test availability by sending out N ICMP-requests, and then wait up to 1 second for N replies.
 
 Hosts that do not reply will be marked in RED, others in GREEN with the response time shown in milliseconds.
 
