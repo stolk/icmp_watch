@@ -466,7 +466,7 @@ int main(int argc, char* argv[])
 		const int numr = read(STDIN_FILENO, &c, 1);
 		if (numr == 1 && (c == 27 || c == 'q' || c == 'Q'))
 			done = 1;
-		struct timeval timeout = default_timeout;    // seconds, microseconds.
+		struct timeval timeout = default_timeout;
 		ping_all(cnt, destinations, &timeout);
 		fprintf(stdout, CLEARSCREEN);
 		for (int i = 0; i < cnt; ++i)
