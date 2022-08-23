@@ -400,11 +400,21 @@ int main(int argc, char* argv[])
 				}
 			case '4':
 				// Only use IPv4
-				restrict_protocol = 4;
+				if (restrict_protocol == 0) {
+					restrict_protocol = 4;
+				} else {
+					fprintf(stderr, "Only one of -4 or -6 is accepted\n");
+					exit(1);
+				}
 				break;
 			case '6':
 				// Only use IPv6
-				restrict_protocol = 6;
+				if (restrict_protocol == 0) {
+					restrict_protocol = 6;
+				} else {
+					fprintf(stderr, "Only one of -4 or -6 is accepted\n");
+					exit(1);
+				}
 				break;
 			case 'h':
 				print_help(argv[0]);
