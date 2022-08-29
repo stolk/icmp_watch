@@ -241,6 +241,7 @@ int main(int argc, char* argv[])
 				exit(0);
 			default:
 				//fprintf(stderr, "getopt_long returned character code 0x%x\n", c);
+				;
 		}
 	} // Finished parsing command line options
 
