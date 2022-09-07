@@ -1,23 +1,27 @@
 
-icmp_watch: icmp_watch.c
-	$(CC) -O2 -Wall -std=gnu99 icmp_watch.c -o icmp_watch
-	strip icmp_watch
+icmpwatch: icmpwatch.c
+	$(CC) -O2 -Wall -std=gnu99 icmpwatch.c -o icmp_watch
+	strip icmpwatch
 
-icmp_watch.dev: icmp_watch.c
-	$(CC) -g -O2 -Wall -std=gnu99 -Wextra -pedantic -fsanitize=address icmp_watch.c -o icmp_watch.dev
+icmpwatch.dev: icmpwatch.c
+	$(CC) -g -O2 -Wall -std=gnu99 -Wextra -pedantic -fsanitize=address icmpwatch.c -o icmpwatch.dev
 
 .PHONY: build build-dev run install uninstall
 
-build: icmp_watch
+build: icmpwatch
 
-build-dev: icmp_watch.dev
+build-dev: icmpwatch.dev
 
-run: icmp_watch
-	./icmp_watch www.ibm.com www.apple.com www.google.com www.stolk.org gamer1 xanderpc
+clean:
+	rm -f icmpwatch
 
-install: icmp_watch
-	sudo cp icmp_watch /usr/local/bin/
+run: icmpwatch
+	./icmpwatch www.ibm.com www.apple.com www.google.com www.stolk.org gamer1 xanderpc
+
+install: icmpwatch
+	install -d ${DESTDIR}/usr/bin
+	install -m 755 icmpwatch ${DESTDIR}/usr/bin/
 
 uninstall:
-	sudo rm -f /usr/local/bin/icmp_watch
+	rm -f ${DESTDIR}/usr/bin/icmpwatch
 

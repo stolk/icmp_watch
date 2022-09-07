@@ -67,6 +67,12 @@ static int ping_all(int cnt, struct in_addr* destinations, int* response_times, 
 	if (sock < 0)
 	{
 		perror("socket");
+		fprintf(stderr,
+			"To allow root to use icmp sockets, run:\n"
+			"$ sudo sysctl -w net.ipv4.ping_group_range=\"0 0\"\n"
+			"To allow all users to use icmp sockets, run:\n"
+			"$ sudo sysctl -w net.ipv4.ping_group_range=\"0 2147483647\"\n"
+		);
 		exit(4);
 	}
 
