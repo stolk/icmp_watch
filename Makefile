@@ -1,6 +1,6 @@
 
 icmpwatch: icmpwatch.c
-	$(CC) -O2 -Wall -std=gnu99 icmpwatch.c -o icmp_watch
+	$(CC) -O2 -Wall -std=gnu99 icmpwatch.c -o icmpwatch
 	strip icmpwatch
 
 icmpwatch.dev: icmpwatch.c
