@@ -16,7 +16,7 @@ clean:
 	rm -f icmpwatch
 
 run: icmpwatch
-	./icmpwatch www.ibm.com www.apple.com www.google.com www.stolk.org gamer1 xanderpc
+	./icmpwatch www.ibm.com www.apple.com www.google.com www.stolk.org www.canonical.com
 
 install: icmpwatch
 	install -d ${DESTDIR}/usr/bin
@@ -24,4 +24,12 @@ install: icmpwatch
 
 uninstall:
 	rm -f ${DESTDIR}/usr/bin/icmpwatch
+
+tarball:
+	tar cvzf ../icmpwatch_1.0.orig.tar.gz Makefile icmpwatch.c compile_flags.txt console.png debian LICENSE README.md .clang-format
+
+packageupload:
+	debuild -S
+	debsign ../icmpwatch_1.0-1_source.changes
+	dput ppa:b-stolk/ppa ../icmpwatch_1.0-1_source.changes
 
