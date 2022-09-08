@@ -237,6 +237,7 @@ int main(int argc, char* argv[])
 					// Set the specified interval as the default timeout
 					default_timeout.tv_sec = (int) interval_double;
 					default_timeout.tv_usec = (int) (interval_double * 1000000);
+					default_timeout.tv_usec = default_timeout.tv_usec % 1000000;
 					break;
 				} else {
 					fprintf(stderr, "-i/--interval needs an argument\n");
@@ -313,9 +314,10 @@ int main(int argc, char* argv[])
 				fprintf(stdout, FGWHT BGGRN "%5d ms" RESETALL "\n", t / 1000);
 		}
 		// Pace ourselves.
-		const int NS_PER_US = 1000;
-		const int us_left = (int) (timeout.tv_sec * 1000000 + timeout.tv_usec);
-		struct timespec ts = {0, us_left * NS_PER_US};
+		const long NS_PER_US = 1000L;
+		const long int us_left = (long int) (timeout.tv_sec * 1000000L + timeout.tv_usec);
+		struct timespec ts = {us_left / 1000000L, us_left * NS_PER_US};
+		ts.tv_nsec = ts.tv_nsec % 1000000000L;
 		nanosleep(&ts, 0);
 	}
 	fprintf(stdout, CLEARSCREEN);
