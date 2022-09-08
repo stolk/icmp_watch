@@ -1,0 +1,49 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" (C) Copyright 2022 Bram Stolk <b.stolk@gmail.com>,
+.\"
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH ICMPWATCH 1 "September  8 2022"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+icmpwatch \- program to monitor ICMP reachability for a set of hosts
+.SH SYNOPSIS
+.B icmpwatch [--interval 1] host1 host2 ... hostN
+.SH DESCRIPTION
+This manual page documents the
+.B icmpwatch
+command.
+.PP
+\fBicmpwatch\fP is a program that that shows a live status of hosts.
+.br
+Hosts are shown in green if reachable via ICMP.
+.br
+Hosts are shown in red is ICMP request was not replied.
+.br
+.SH OPTIONS
+\fB-i\fP 
+.br
+\fB--interval\fP 
+.br
+Sets the refresh interval in seconds. Default is 2 seconds.
+.sp 1
+\fB-h\fP
+.br
+\fB--help\fP
+.br
+Show command line help.
+.sp 1
+.SH SEE ALSO
+.sp 1
