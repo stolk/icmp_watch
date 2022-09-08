@@ -1,0 +1,15 @@
+Source: icmpwatch
+Section: contrib/utils
+Priority: optional
+Maintainer: Bram Stolk <bram.stolk@canonical.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13)
+Standards-Version: 4.6.1
+Homepage: https://github.com/stolk/icmp_watch
+
+Package: icmpwatch
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Shows network reachability of hosts in a text terminal.
+ Pings multiple hosts, and visualizes the results in a text terminal.
