@@ -5,8 +5,8 @@
 *.o
 
 # Executables
-icmp_watch
-icmp_watch.dev
+icmpwatch.dev
+icmpwatch
 
 # Debug files
 *.dSYM/
